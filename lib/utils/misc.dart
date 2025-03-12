@@ -86,6 +86,18 @@ String getShortSystemLocale() {
   return Platform.localeName.split("_")[0];
 }
 
+Future<List<String>> getUserCerts() async {
+  if (!Platform.isAndroid) {
+    return [];
+  }
+  try {
+    final List<dynamic> userCerts = await androidChannel.invokeMethod('getUserCerts');
+    return userCerts.cast<String>();
+  } catch (e) {
+    return [];
+  }
+}
+
 Future<List<String>> getSupportedTextActivityList() async {
   if (!Platform.isAndroid) {
     return [];
