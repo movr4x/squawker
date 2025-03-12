@@ -8,6 +8,14 @@ class AppHttpClient {
 
   static IOClient? _ioClient;
 
+  static HttpClient? _httpClient = null;
+
+  static HttpClient _getHttpClient() {
+    if (_httpClient == null)
+      _httpClient = HttpClient(context: SecurityContext(withTrustedRoots: true));
+    return _httpClient;
+  }
+
   static void setProxy(String? proxy) {
     if (proxy?.isEmpty ?? true) {
       _ioClient = null;
@@ -16,7 +24,7 @@ class AppHttpClient {
     Uri uri = Uri.parse(proxy!);
     HttpClient httpClient;
     if (uri.scheme == 'socks5') {
-      httpClient = HttpClient();
+      httpClient = _getHttpClient();
       String? username;
       String? password;
       if (uri.userInfo.isNotEmpty) {
@@ -31,7 +39,7 @@ class AppHttpClient {
       ]);
     }
     else if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
-      httpClient = HttpClient();
+      httpClient = _getHttpClient();
       httpClient.findProxy = (Uri url) {
         String foundProxy = HttpClient.findProxyFromEnvironment(url, environment: {"https_proxy": proxy});
         return foundProxy;
@@ -40,7 +48,9 @@ class AppHttpClient {
     else {
       throw Exception('Uri scheme ${uri.scheme} not implemented.');
     }
-    httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    // With network_security_config.xml allowing user supplied certs for SecurityContext, user can
+    // simply add certificate for proxy, so accepting invalid certs should not be needed anymore.
+    //httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     _ioClient = IOClient(httpClient);
   }
 
@@ -49,7 +59,7 @@ class AppHttpClient {
       return _ioClient!.get(url, headers: headers);
     }
     else {
-      return http.get(url, headers: headers);
+      return _getHttpClient().get(url, headers: headers);
     }
   }
 
@@ -58,7 +68,7 @@ class AppHttpClient {
       return _ioClient!.post(url, headers: headers, body: body, encoding: encoding);
     }
     else {
-      return http.post(url, headers: headers, body: body, encoding: encoding);
+      return _getHttpClient().post(url, headers: headers, body: body, encoding: encoding);
     }
   }
 
@@ -67,8 +77,7 @@ class AppHttpClient {
       return _ioClient!.send(request);
     }
     else {
-      http.Client baseClient = http.Client();
-      return baseClient.send(request);
+      return _getHttpClient().send(request);
     }
   }
 
