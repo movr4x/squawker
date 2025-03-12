@@ -10,7 +10,17 @@ class AppHttpClient {
   static IOClient? _ioClient;
 
   static HttpClient _getHttpClient() {
-    _httpClient ??= HttpClient(context: SecurityContext(withTrustedRoots: true));
+    if (_httpClient == null) {
+      final securityContext = SecurityContext(withTrustedRoots: true);
+      final List<String> userCerts = getUserCerts();
+      if (!userCerts.isEmpty) {
+        for (final certPem in userCerts) {
+          final certBytes = utf8.encode(certPem);
+          securityContext.setTrustedCertificatesBytes(certBytes);
+        }
+      }
+      _httpClient = HttpClient(context: securityContext);
+    }
     return _httpClient!;
   }
 
