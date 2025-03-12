@@ -7,13 +7,16 @@ import 'package:socks5_proxy/socks_client.dart';
 class AppHttpClient {
 
   static IOClient? _ioClient;
+  static HttpClient? _httpClient;
 
-  static HttpClient? _httpClient = null;
+  static IOClient _getIOClient() {
+    _ioClient ??= IOClient(_getHttpClient());
+    return _ioClient!;
+  }
 
   static HttpClient _getHttpClient() {
-    if (_httpClient == null)
-      _httpClient = HttpClient(context: SecurityContext(withTrustedRoots: true));
-    return _httpClient;
+    _httpClient ??= HttpClient(context: SecurityContext(withTrustedRoots: true));
+    return _httpClient!;
   }
 
   static void setProxy(String? proxy) {
@@ -51,34 +54,18 @@ class AppHttpClient {
     // With network_security_config.xml allowing user supplied certs for SecurityContext, user can
     // simply add certificate for proxy, so accepting invalid certs should not be needed anymore.
     //httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-    _ioClient = IOClient(httpClient);
   }
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
-    if (_ioClient != null) {
-      return _ioClient!.get(url, headers: headers);
-    }
-    else {
-      return _getHttpClient().get(url, headers: headers);
-    }
+    return _getIOClient().get(url, headers: headers);
   }
 
   static Future<http.Response> httpPost(Uri url, {Map<String,String>? headers, Object? body, Encoding? encoding}) async {
-    if (_ioClient != null) {
-      return _ioClient!.post(url, headers: headers, body: body, encoding: encoding);
-    }
-    else {
-      return _getHttpClient().post(url, headers: headers, body: body, encoding: encoding);
-    }
+    return _getIOClient().post(url, headers: headers, body: body, encoding: encoding);
   }
 
   static Future<http.StreamedResponse> httpSend(http.Request request) async {
-    if (_ioClient != null) {
-      return _ioClient!.send(request);
-    }
-    else {
-      return _getHttpClient().send(request);
-    }
+    return _getIOClient().send(request);
   }
 
 }
