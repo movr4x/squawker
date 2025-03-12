@@ -14,7 +14,7 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import android.security.KeyStore
+import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.util.Base64
 
