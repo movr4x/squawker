@@ -93,10 +93,10 @@ class MainActivity: FlutterActivity() {
             val alias = aliases.nextElement()
             if (alias.startsWith("user:")) {
                 val cert = keyStore.getCertificate(alias) as X509Certificate
-                val cert_pem = "-----BEGIN CERTIFICATE-----\n" +
+                val certPem = "-----BEGIN CERTIFICATE-----\n" +
                         Base64.getEncoder().encodeToString(cert.encoded) +
                         "\n-----END CERTIFICATE-----"
-                userCerts.add(cert_pem)
+                userCerts.add(certPem)
             }
         }
         return userCerts
