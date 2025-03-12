@@ -99,7 +99,7 @@ class MainActivity: FlutterActivity() {
         //        userCerts.add(certPem)
         //    }
         //}
-        return []
+        return emptyList<String>()
     }
 
     private fun getTextActivityList() = arrayListOf<String>().apply {
