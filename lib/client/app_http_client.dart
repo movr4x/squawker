@@ -6,17 +6,17 @@ import 'package:socks5_proxy/socks_client.dart';
 
 class AppHttpClient {
 
-  static IOClient? _ioClient;
   static HttpClient? _httpClient;
-
-  static IOClient _getIOClient() {
-    _ioClient ??= IOClient(_getHttpClient());
-    return _ioClient!;
-  }
+  static IOClient? _ioClient;
 
   static HttpClient _getHttpClient() {
     _httpClient ??= HttpClient(context: SecurityContext(withTrustedRoots: true));
     return _httpClient!;
+  }
+
+  static IOClient _getIOClient() {
+    _ioClient ??= IOClient(_getHttpClient());
+    return _ioClient!;
   }
 
   static void setProxy(String? proxy) {
