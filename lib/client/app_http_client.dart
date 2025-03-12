@@ -6,27 +6,34 @@ import 'package:socks5_proxy/socks_client.dart';
 
 class AppHttpClient {
 
-  static HttpClient? _httpClient;
-  static IOClient? _ioClient;
+  static Future<HttpClient>? _httpClient;
+  static Future<IOClient>? _ioClient;
 
-  static HttpClient _getHttpClient() {
-    if (_httpClient == null) {
+  static Future<HttpClient> _createHttpClient() async {
       final securityContext = SecurityContext(withTrustedRoots: true);
-      final List<String> userCerts = getUserCerts();
+      final List<String> userCerts = await getUserCerts();
       if (!userCerts.isEmpty) {
         for (final certPem in userCerts) {
           final certBytes = utf8.encode(certPem);
           securityContext.setTrustedCertificatesBytes(certBytes);
         }
       }
-      _httpClient = HttpClient(context: securityContext);
-    }
-    return _httpClient!;
+      return HttpClient(context: securityContext);
   }
 
-  static IOClient _getIOClient() {
-    _ioClient ??= IOClient(_getHttpClient());
-    return _ioClient!;
+  static Future<HttpClient> _getHttpClient() {
+    _httpClient ??= _createHttpClient();
+    return _httpClient;
+  }
+
+  static Future<IOClient> _createIOClient() async {
+    final HttpClient httpClient = await _getHttpClient();
+    return IOClient(httpClient);
+  }
+
+  static Future<IOClient> _getIOClient() {
+    _ioClient ??= _createIOClient();
+    return _ioClient;
   }
 
   static void setProxy(String? proxy) {
@@ -37,7 +44,7 @@ class AppHttpClient {
     Uri uri = Uri.parse(proxy!);
     HttpClient httpClient;
     if (uri.scheme == 'socks5') {
-      httpClient = _getHttpClient();
+      httpClient = await _getHttpClient();
       String? username;
       String? password;
       if (uri.userInfo.isNotEmpty) {
@@ -52,7 +59,7 @@ class AppHttpClient {
       ]);
     }
     else if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
-      httpClient = _getHttpClient();
+      httpClient = await _getHttpClient();
       httpClient.findProxy = (Uri url) {
         String foundProxy = HttpClient.findProxyFromEnvironment(url, environment: {"https_proxy": proxy});
         return foundProxy;
@@ -67,15 +74,15 @@ class AppHttpClient {
   }
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
-    return _getIOClient().get(url, headers: headers);
+    return (await _getIOClient()).get(url, headers: headers);
   }
 
   static Future<http.Response> httpPost(Uri url, {Map<String,String>? headers, Object? body, Encoding? encoding}) async {
-    return _getIOClient().post(url, headers: headers, body: body, encoding: encoding);
+    return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
   }
 
   static Future<http.StreamedResponse> httpSend(http.Request request) async {
-    return _getIOClient().send(request);
+    return (await _getIOClient()).send(request);
   }
 
 }
