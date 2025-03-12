@@ -12,7 +12,7 @@ class AppHttpClient {
 
   static Future<HttpClient> _createHttpClient() async {
       final securityContext = SecurityContext(withTrustedRoots: true);
-      final List<String> userCerts = await getUserCerts();
+      final List<String> userCerts = []; //await getUserCerts();
       if (!userCerts.isEmpty) {
         for (final certPem in userCerts) {
           final certBytes = utf8.encode(certPem);
