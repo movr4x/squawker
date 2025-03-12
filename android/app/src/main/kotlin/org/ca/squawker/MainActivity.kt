@@ -85,21 +85,21 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun getUserCerts(): List<String> {
-        val keyStore = KeyStore.getInstance("AndroidCAStore")
-        keyStore.load(null, null)
-        val aliases = keyStore.aliases()
-        val userCerts = mutableListOf<String>()
-        while (aliases.hasMoreElements()) {
-            val alias = aliases.nextElement()
-            if (alias.startsWith("user:")) {
-                val cert = keyStore.getCertificate(alias) as X509Certificate
-                val certPem = "-----BEGIN CERTIFICATE-----\n" +
-                        Base64.getEncoder().encodeToString(cert.encoded) +
-                        "\n-----END CERTIFICATE-----"
-                userCerts.add(certPem)
-            }
-        }
-        return userCerts
+        //val keyStore = KeyStore.getInstance("AndroidCAStore")
+        //keyStore.load(null, null)
+        //val aliases = keyStore.aliases()
+        //val userCerts = mutableListOf<String>()
+        //while (aliases.hasMoreElements()) {
+        //    val alias = aliases.nextElement()
+        //    if (alias.startsWith("user:")) {
+        //        val cert = keyStore.getCertificate(alias) as X509Certificate
+        //        val certPem = "-----BEGIN CERTIFICATE-----\n" +
+        //                Base64.getEncoder().encodeToString(cert.encoded) +
+        //                "\n-----END CERTIFICATE-----"
+        //        userCerts.add(certPem)
+        //    }
+        //}
+        return []
     }
 
     private fun getTextActivityList() = arrayListOf<String>().apply {
