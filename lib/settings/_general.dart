@@ -79,7 +79,7 @@ class SettingsGeneralFragment extends StatelessWidget {
         TextButton(
           onPressed: () async {
             try {
-              AppHttpClient.setProxy(controller.text);
+              await AppHttpClient.setProxy(controller.text);
               await prefs.set(optionProxy, controller.text);
             }
             catch (e, s) {
