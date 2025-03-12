@@ -27,7 +27,7 @@ class AppHttpClient {
   }
 
   static Future<IOClient> _createIOClient() async {
-    final HttpClient httpClient = await _getHttpClient();
+    HttpClient httpClient = await _getHttpClient();
     return IOClient(httpClient);
   }
 
