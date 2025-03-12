@@ -85,21 +85,37 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun getUserCerts(): List<String> {
-        //val keyStore = KeyStore.getInstance("AndroidCAStore")
-        //keyStore.load(null, null)
-        //val aliases = keyStore.aliases()
-        //val userCerts = mutableListOf<String>()
-        //while (aliases.hasMoreElements()) {
-        //    val alias = aliases.nextElement()
-        //    if (alias.startsWith("user:")) {
-        //        val cert = keyStore.getCertificate(alias) as X509Certificate
-        //        val certPem = "-----BEGIN CERTIFICATE-----\n" +
-        //                Base64.getEncoder().encodeToString(cert.encoded) +
-        //                "\n-----END CERTIFICATE-----"
-        //        userCerts.add(certPem)
-        //    }
-        //}
-        return emptyList<String>()
+        val userCerts = mutableListOf<String>()
+        try {
+            val keyStore = KeyStore.getInstance("AndroidCAStore")
+            keyStore.load(null, null)
+            val aliases = keyStore.aliases()
+            while (aliases.hasMoreElements()) {
+                try {
+                    val alias = aliases.nextElement()
+                    if (alias == null || !alias.startsWith("user:"))
+                        continue
+                    val cert = keyStore.getCertificate(alias)
+                    if (cert !is X509Certificate)
+                        continue
+                    try {
+                        val certPem = "-----BEGIN CERTIFICATE-----\n" +
+                            Base64.getEncoder().encodeToString(cert.encoded) +
+                            "\n-----END CERTIFICATE-----"
+                        userCerts.add(certPem)
+                    } catch (e: Exception) {
+                        // Cert issue?
+                        continue
+                    }
+                } catch (e: Exception) {
+                    // Alias issue?
+                    continue
+                }
+            }
+        } catch (e: Exception) {
+            // KeyStore issue?
+        }
+        return userCerts
     }
 
     private fun getTextActivityList() = arrayListOf<String>().apply {
