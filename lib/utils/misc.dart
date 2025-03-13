@@ -86,23 +86,10 @@ String getShortSystemLocale() {
   return Platform.localeName.split("_")[0];
 }
 
-Future<void> logNotification(String message) async {
-  try {
-    await androidChannel.invokeMethod('logNotification', {'message': message});
-  } catch (e) {
-  }
-}
-
 Future<List<String>> getUserCerts() async {
   if (!Platform.isAndroid) {
     return [];
   }
-  //try {
-  //  final List<dynamic> userCerts = await androidChannel.invokeMethod('getUserCerts');
-  //  return userCerts.cast<String>();
-  //} catch (e) {
-  //  return [];
-  //}
   try {
     final List<dynamic>? certs = await androidChannel.invokeMethod('getUserCerts');
     return certs?.cast<String>() ?? [];
