@@ -238,7 +238,7 @@ Future<void> main() async {
 
   await TwitterAccount.loadAllTwitterTokensAndRateLimits();
 
-  AppHttpClient.setProxy(prefService.get(optionProxy));
+  await AppHttpClient.setProxy(prefService.get(optionProxy));
 
   TranslationAPI.setTranslationHostsFromStr(prefService.get(optionTranslators));
 

@@ -14,6 +14,9 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.security.KeyStore
+import java.security.cert.X509Certificate
+import android.util.Base64
 
 class MainActivity: FlutterActivity() {
 
@@ -75,9 +78,35 @@ class MainActivity: FlutterActivity() {
                     requestPostNotificationsPermissions()
                     result.success(true)
                 }
+                "getUserCerts" -> result.success(getUserCerts())
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun getUserCerts(): List<String> {
+        val pemCerts = mutableListOf<String>()
+        try {
+            val keyStore = KeyStore.getInstance("AndroidCAStore")
+            keyStore.load(null, null)
+            val aliases = keyStore.aliases()
+            while (aliases.hasMoreElements()) {
+                try {
+                    val alias = aliases.nextElement() ?: continue
+                    if (!alias.startsWith("user:")) continue
+                    val cert = keyStore.getCertificate(alias) as? X509Certificate ?: continue
+                    val certEncoded = Base64.encodeToString(cert.encoded, Base64.NO_WRAP)
+                    val pemBody = certEncoded.chunked(64).joinToString("\n")
+                    val pem = "-----BEGIN CERTIFICATE-----\n${pemBody}\n-----END CERTIFICATE-----"
+                    pemCerts.add(pem)
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+        } catch (e: Exception) {
+            //
+        }
+        return pemCerts
     }
 
     private fun getTextActivityList() = arrayListOf<String>().apply {
