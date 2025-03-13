@@ -113,11 +113,21 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun showNotification(message: String, id: Int) {
+    private fun showNotification2(message: String, id: Int) {
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Use a default icon
             .setContentTitle("Certificate Debug")
             .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+        notificationManager.notify(id, builder.build())
+    }
+
+    private fun showNotification(message: String, id: Int) {
+        val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Certificate Debug")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_LOW)
         notificationManager.notify(id, builder.build())
     }
