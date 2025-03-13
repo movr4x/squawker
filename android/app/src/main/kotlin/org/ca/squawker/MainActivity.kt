@@ -87,9 +87,9 @@ class MainActivity: FlutterActivity() {
     private fun getUserCerts(): List<String> {
         val pemCerts = mutableListOf<String>()
         try {
-            val keyStore = KeyStore.getInstance("AndroidCAStore") ?: return pemCerts
+            val keyStore = KeyStore.getInstance("AndroidCAStore")
             keyStore.load(null, null)
-            val aliases = keyStore.aliases() ?: return pemCerts
+            val aliases = keyStore.aliases()
             while (aliases.hasMoreElements()) {
                 try {
                     val alias = aliases.nextElement() ?: continue
