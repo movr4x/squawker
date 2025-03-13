@@ -12,9 +12,7 @@ class AppHttpClient {
 
   static Future<HttpClient> _createHttpClient() async {
     final List<String> pemCerts = (await getUserCerts()) ?? [];
-    if (pemCerts.isEmpty) {
-      return HttpClient();
-    }
+    if (pemCerts.isEmpty) return HttpClient();
     final securityContext = SecurityContext(withTrustedRoots: true);
     try {
       final pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
