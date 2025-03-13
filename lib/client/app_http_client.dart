@@ -11,15 +11,28 @@ class AppHttpClient {
   static Future<IOClient>? _ioClient;
 
   static Future<HttpClient> _createHttpClient() async {
+      await logNotification('Creating HttpClient');
       final securityContext = SecurityContext(withTrustedRoots: true);
-      final List<String> userCerts = await getUserCerts();
-      if (!userCerts.isEmpty) {
-        for (final certPem in userCerts) {
-          final certBytes = utf8.encode(certPem);
-          securityContext.setTrustedCertificatesBytes(certBytes);
+      await logNotification('Created SecurityContext()');
+      final List<String> certs = await getUserCerts();
+      await logNotification('Retrieved ${certs.length} user certificates');
+      if (!certs.isEmpty) {
+        for (final pem in certs) {
+          try {
+            final certBytes = utf8.encode(pem.trim());
+            securityContext.setTrustedCertificatesBytes(certBytes);
+            await logNotification('Added certificate: ${pem.substring(0, 50)}...');
+          } catch (e) {
+            await logNotification('Error adding certificate: $e');
+          }
         }
       }
-      return HttpClient(context: securityContext);
+      final httpClient = HttpClient(context: securityContext);
+      httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        logNotification('Bad certificate for $host:$port - Subject: ${cert.subject}');
+        return false;
+      };
+      return httpClient;
   }
 
   static Future<HttpClient> _getHttpClient() {
