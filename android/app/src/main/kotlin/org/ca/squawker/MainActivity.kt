@@ -86,37 +86,15 @@ class MainActivity: FlutterActivity() {
 
     private fun getUserCerts(): List<String> {
         val pemCerts = mutableListOf<String>()
-
-        val keyStore: KeyStore? = try {
-            KeyStore.getInstance("AndroidCAStore")
-        } catch (e: Exception) {
-            return pemCerts
-        }
-
         try {
-            keyStore?.load(null, null)
-        } catch (e: Exception) {
-            return pemCerts
-        }
-
-        val aliases = try {
-            keyStore?.aliases()
-        } catch (e: Exception) {
-            return pemCerts
-        } ?: run {
-            // null
-            return pemCerts
-        }
-
-        try {
+            val keyStore = KeyStore?.getInstance("AndroidCAStore") ?: return pemCerts
+            keyStore.load(null, null)
+            val aliases = keyStore.aliases() ?: return pemCerts
             while (aliases.hasMoreElements()) {
                 try {
                     val alias = aliases.nextElement() ?: continue
-                    if (!alias.startsWith("user:"))
-                        continue
-                    val cert = keyStore?.getCertificate(alias) as? X509Certificate
-                    if (cert == null)
-                        continue
+                    if (!alias.startsWith("user:")) continue
+                    val cert = keyStore.getCertificate(alias) as? X509Certificate ?: continue
                     val certEncoded = Base64.encodeToString(cert.encoded, Base64.NO_WRAP)
                     val pemBody = certEncoded.chunked(64).joinToString("\n")
                     val pem = "-----BEGIN CERTIFICATE-----\n${pemBody}\n-----END CERTIFICATE-----"
@@ -128,7 +106,6 @@ class MainActivity: FlutterActivity() {
         } catch (e: Exception) {
             //
         }
-
         return pemCerts
     }
 
