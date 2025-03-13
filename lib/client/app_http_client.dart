@@ -17,15 +17,23 @@ class AppHttpClient {
       final List<String> certs = await getUserCerts();
       await logNotification('Retrieved ${certs.length} user certificates');
       if (!certs.isEmpty) {
-        for (final pem in certs) {
-          try {
-            final certBytes = utf8.encode(pem.trim());
-            securityContext.setTrustedCertificatesBytes(certBytes);
-            await logNotification('Added certificate: ${pem.substring(0, 50)}...');
-          } catch (e) {
-            await logNotification('Error adding certificate: $e');
-          }
+        try {
+          final combinedPem = certs.map((pem) => pem.trim()).join('\n');
+          final certBytes = utf8.encode(combinedPem);
+          securityContext.setTrustedCertificatesBytes(certBytes);
+          await logNotification('Added certificates to SecurityContext');
+        } catch (e) {
+          await logNotification('Error adding certificates: $e');
         }
+        //for (final pem in certs) {
+        //  try {
+        //    final certBytes = utf8.encode(pem.trim());
+        //    securityContext.setTrustedCertificatesBytes(certBytes);
+        //    await logNotification('Added certificate: ${pem.substring(0, 50)}...');
+        //  } catch (e) {
+        //    await logNotification('Error adding certificate: $e');
+        //  }
+        //}
       }
       final httpClient = HttpClient(context: securityContext);
       httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
@@ -88,15 +96,24 @@ class AppHttpClient {
   }
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
-    return (await _getIOClient()).get(url, headers: headers);
+    Future<http.Response> r = (await _getIOClient()).get(url, headers: headers);
+    await logNotification('httpGet: r=${r.statusCode}: ${url}');
+    return r;
+    //return (await _getIOClient()).get(url, headers: headers);
   }
 
   static Future<http.Response> httpPost(Uri url, {Map<String,String>? headers, Object? body, Encoding? encoding}) async {
-    return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
+    Future<http.Response> r = (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
+    await logNotification('httpPost: r=${r.statusCode}: ${url}');
+    return r;
+    //return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
   }
 
   static Future<http.StreamedResponse> httpSend(http.Request request) async {
-    return (await _getIOClient()).send(request);
+    Future<http.StreamedResponse> r = (await _getIOClient()).send(request);
+    await logNotification('httpSend: r=${r.statusCode}: ${url}');
+    return r;
+    //return (await _getIOClient()).send(request);
   }
 
 }
