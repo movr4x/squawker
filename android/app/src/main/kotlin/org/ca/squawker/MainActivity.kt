@@ -16,11 +16,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import java.util.Base64
+import android.util.Base64
 import android.app.NotificationManager
 import android.app.NotificationChannel
 import android.content.Context
-import android.os.Build
 import androidx.core.app.NotificationCompat
 
 class MainActivity: FlutterActivity() {
@@ -134,7 +133,7 @@ class MainActivity: FlutterActivity() {
             showNotification("Loading KeyStore", 5)
             keyStore?.load(null, null)
         } catch (e: Exception) {
-            showNotification("KeyStore.load failed: ${e.message}", 56
+            showNotification("KeyStore.load failed: ${e.message}", 56)
             return userCerts
         }
 
@@ -159,7 +158,7 @@ class MainActivity: FlutterActivity() {
             if (alias.startsWith("user:")) {
                 try {
                     showNotification("Getting cert for alias: $alias", 11 + aliasCount)
-                    val cert = keyStore.getCertificate(alias) as? X509Certificate
+                    val cert = keyStore?.getCertificate(alias) as? X509Certificate
                     if (cert != null) {
                         val pem = "-----BEGIN CERTIFICATE-----\n" +
                                 Base64.encodeToString(cert.encoded, Base64.DEFAULT) +
