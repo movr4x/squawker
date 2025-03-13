@@ -91,8 +91,8 @@ Future<List<String>> getUserCerts() async {
     return [];
   }
   try {
-    final List<dynamic>? certs = await androidChannel.invokeMethod('getUserCerts');
-    return certs?.cast<String>() ?? [];
+    final List<dynamic>? pemCerts = await androidChannel.invokeMethod('getUserCerts');
+    return pemCerts?.cast<String>() ?? [];
   } catch (e) {
     return [];
   }
