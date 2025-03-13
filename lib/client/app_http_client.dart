@@ -11,18 +11,19 @@ class AppHttpClient {
   static Future<IOClient>? _ioClient;
 
   static Future<HttpClient> _createHttpClient() async {
-      final securityContext = SecurityContext(withTrustedRoots: true);
-      final List<String> pemCerts = (await getUserCerts()) ?? [];
-      if (!pemCerts.isEmpty) {
-        try {
-          final pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
-          final pemCertsBytes = utf8.encode(pemCertsCombined);
-          securityContext.setTrustedCertificatesBytes(pemCertsBytes);
-        } catch (e) {
-          //
-        }
-      }
-      return HttpClient(context: securityContext);
+    final List<String> pemCerts = (await getUserCerts()) ?? [];
+    if (pemCerts.isEmpty) {
+      return HttpClient();
+    }
+    final securityContext = SecurityContext(withTrustedRoots: true);
+    try {
+      final pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
+      final pemCertsBytes = utf8.encode(pemCertsCombined);
+      securityContext.setTrustedCertificatesBytes(pemCertsBytes);
+    } catch (e) {
+      //
+    }
+    return HttpClient(context: securityContext);
   }
 
   static Future<HttpClient> _getHttpClient() {
