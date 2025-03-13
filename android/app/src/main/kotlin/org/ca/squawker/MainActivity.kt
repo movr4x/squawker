@@ -17,10 +17,17 @@ import io.flutter.plugin.common.MethodChannel
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.util.Base64
+import android.app.NotificationManager
+import android.app.NotificationChannel
+import android.content.Context
+import android.os.Build
+import androidx.core.app.NotificationCompat
 
 class MainActivity: FlutterActivity() {
 
     private val CHANNEL = "squawker/android_info"
+    private val NOTIFICATION_CHANNEL_ID = "cert_debug_channel"
+    private lateinit var notificationManager: NotificationManager
 
     private val MY_PERMISSIONS_POST_NOTIFICATIONS = 1
 
@@ -57,6 +64,8 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        setupNotificationChannel()
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         methodChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             CHANNEL
@@ -84,7 +93,93 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    private fun setupNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "Certificate Debug",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun showNotification(message: String, id: Int) {
+        val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info) // Use a default icon
+            .setContentTitle("Certificate Debug")
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+        notificationManager.notify(id, builder.build())
+    }
+
     private fun getUserCerts(): List<String> {
+        showNotification("Starting getUserCertificates", 1)
+        
+        val userCerts = mutableListOf<String>()
+        showNotification("After mutableListOf<String>()", 2)
+        
+        // Step 1: Get KeyStore instance
+        val keyStore: KeyStore? = try {
+            showNotification("Getting KeyStore instance", 3)
+            KeyStore.getInstance("AndroidCAStore")
+        } catch (e: Exception) {
+            showNotification("KeyStore.getInstance failed: ${e.message}", 4)
+            return userCerts
+        }
+
+        // Step 2: Load KeyStore
+        try {
+            showNotification("Loading KeyStore", 5)
+            keyStore?.load(null, null)
+        } catch (e: Exception) {
+            showNotification("KeyStore.load failed: ${e.message}", 56
+            return userCerts
+        }
+
+        // Step 3: Get aliases
+        val aliases = try {
+            showNotification("Getting aliases", 7)
+            keyStore?.aliases()
+        } catch (e: Exception) {
+            showNotification("aliases failed: ${e.message}", 8)
+            return userCerts
+        } ?: run {
+            showNotification("aliases is null", 9)
+            return userCerts
+        }
+
+        // Step 4: Process each alias
+        showNotification("Processing aliases", 10)
+        var aliasCount = 0
+        while (aliases.hasMoreElements()) {
+            val alias = aliases.nextElement() ?: continue
+            aliasCount++
+            if (alias.startsWith("user:")) {
+                try {
+                    showNotification("Getting cert for alias: $alias", 11 + aliasCount)
+                    val cert = keyStore.getCertificate(alias) as? X509Certificate
+                    if (cert != null) {
+                        val pem = "-----BEGIN CERTIFICATE-----\n" +
+                                Base64.encodeToString(cert.encoded, Base64.DEFAULT) +
+                                "\n-----END CERTIFICATE-----"
+                        userCerts.add(pem)
+                        showNotification("Added cert for alias: $alias", 40 + aliasCount)
+                    } else {
+                        showNotification("Cert is null for alias: $alias", 60 + aliasCount)
+                    }
+                } catch (e: Exception) {
+                    showNotification("Cert processing failed for $alias: ${e.message}", 80 + aliasCount)
+                    continue
+                }
+            }
+        }
+        showNotification("Finished with ${userCerts.size} certs", 90)
+        return userCerts
+    }
+
+    private fun getUserCerts2(): List<String> {
         val userCerts = mutableListOf<String>()
         try {
             val keyStore = KeyStore.getInstance("AndroidCAStore")
