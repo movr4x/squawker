@@ -90,9 +90,15 @@ Future<List<String>> getUserCerts() async {
   if (!Platform.isAndroid) {
     return [];
   }
+  //try {
+  //  final List<dynamic> userCerts = await androidChannel.invokeMethod('getUserCerts');
+  //  return userCerts.cast<String>();
+  //} catch (e) {
+  //  return [];
+  //}
   try {
-    final List<dynamic> userCerts = await androidChannel.invokeMethod('getUserCerts');
-    return userCerts.cast<String>();
+    final List<dynamic>? certs = await androidChannel.invokeMethod('getUserCerts');
+    return certs?.cast<String>() ?? [];
   } catch (e) {
     return [];
   }
