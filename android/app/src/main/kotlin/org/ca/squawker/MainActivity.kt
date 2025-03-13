@@ -179,9 +179,9 @@ class MainActivity: FlutterActivity() {
                     showNotification("Getting cert for alias: $alias", 11 + aliasCount)
                     val cert = keyStore?.getCertificate(alias) as? X509Certificate
                     if (cert != null) {
-                        val pem = "-----BEGIN CERTIFICATE-----\n" +
-                                Base64.encodeToString(cert.encoded, Base64.DEFAULT) +
-                                "\n-----END CERTIFICATE-----"
+                        val encoded = Base64.encodeToString(cert.encoded, Base64.NO_WRAP)
+                        val pemBody = encoded.chunked(64).joinToString("\n")
+                        val pem = "-----BEGIN CERTIFICATE-----\n$pemBody\n-----END CERTIFICATE-----"
                         userCerts.add(pem)
                         showNotification("Added cert for alias: $alias", 40 + aliasCount)
                     } else {
