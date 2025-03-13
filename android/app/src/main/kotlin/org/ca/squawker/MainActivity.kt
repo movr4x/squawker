@@ -87,6 +87,15 @@ class MainActivity: FlutterActivity() {
                     result.success(true)
                 }
                 "getUserCerts" -> result.success(getUserCerts())
+                "logNotification" -> {
+                    val message = call.argument<String>("message")
+                    if (message != null) {
+                        showNotification(message, System.currentTimeMillis().toInt())
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Message is null", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
