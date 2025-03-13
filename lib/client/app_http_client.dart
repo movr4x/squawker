@@ -11,36 +11,18 @@ class AppHttpClient {
   static Future<IOClient>? _ioClient;
 
   static Future<HttpClient> _createHttpClient() async {
-      await logNotification('Creating HttpClient');
       final securityContext = SecurityContext(withTrustedRoots: true);
-      await logNotification('Created SecurityContext()');
-      final List<String> certs = await getUserCerts();
-      await logNotification('Retrieved ${certs.length} user certificates');
-      if (!certs.isEmpty) {
+      final List<String> pemCerts = (await getUserCerts()) ?? [];
+      if (!pemCerts.isEmpty) {
         try {
-          final combinedPem = certs.map((pem) => pem.trim()).join('\n');
-          final certBytes = utf8.encode(combinedPem);
-          securityContext.setTrustedCertificatesBytes(certBytes);
-          await logNotification('Added certificates to SecurityContext');
+          final pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
+          final pemCertsBytes = utf8.encode(pemCertsCombined);
+          securityContext.setTrustedCertificatesBytes(pemCertsBytes);
         } catch (e) {
-          await logNotification('Error adding certificates: $e');
+          //
         }
-        //for (final pem in certs) {
-        //  try {
-        //    final certBytes = utf8.encode(pem.trim());
-        //    securityContext.setTrustedCertificatesBytes(certBytes);
-        //    await logNotification('Added certificate: ${pem.substring(0, 50)}...');
-        //  } catch (e) {
-        //    await logNotification('Error adding certificate: $e');
-        //  }
-        //}
       }
-      final httpClient = HttpClient(context: securityContext);
-      httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
-        logNotification('Bad certificate for $host:$port - Subject: ${cert.subject}');
-        return false;
-      };
-      return httpClient;
+      return HttpClient(context: securityContext);
   }
 
   static Future<HttpClient> _getHttpClient() {
@@ -90,30 +72,21 @@ class AppHttpClient {
     else {
       throw Exception('Uri scheme ${uri.scheme} not implemented.');
     }
-    // With network_security_config.xml allowing user supplied certs for SecurityContext, user can
-    // simply add certificate for proxy, so accepting invalid certs should not be needed anymore.
+    // With user supplied certs for SecurityContext, user can simply add certificate
+    // for proxy, so accepting invalid certs should not be needed anymore.
     //httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
   }
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
-    final r = await (await _getIOClient()).get(url, headers: headers);
-    await logNotification('httpGet: r=${r.statusCode}: ${url}');
-    return r;
-    //return (await _getIOClient()).get(url, headers: headers);
+    return (await _getIOClient()).get(url, headers: headers);
   }
 
   static Future<http.Response> httpPost(Uri url, {Map<String,String>? headers, Object? body, Encoding? encoding}) async {
-    final r = await (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
-    await logNotification('httpPost: r=${r.statusCode}: ${url}');
-    return r;
-    //return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
+    return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
   }
 
   static Future<http.StreamedResponse> httpSend(http.Request request) async {
-    final r = await (await _getIOClient()).send(request);
-    await logNotification('httpSend: r=${r.statusCode}: ${request.url}');
-    return r;
-    //return (await _getIOClient()).send(request);
+    return (await _getIOClient()).send(request);
   }
 
 }
