@@ -194,7 +194,7 @@ class MainActivity: FlutterActivity() {
                         continue
                     try {
                         val certPem = "-----BEGIN CERTIFICATE-----\n" +
-                            Base64.getEncoder().encodeToString(cert.encoded) +
+                            Base64.encodeToString(cert.encoded, Base64.DEFAULT) +
                             "\n-----END CERTIFICATE-----"
                         userCerts.add(certPem)
                     } catch (e: Exception) {
