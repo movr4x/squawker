@@ -97,21 +97,24 @@ class AppHttpClient {
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
     Future<http.Response> r = (await _getIOClient()).get(url, headers: headers);
-    await logNotification('httpGet: r=${r.statusCode}: ${url}');
+    final s = r.statusCode.toString();
+    await logNotification('httpGet: r=${s}: ${url}');
     return r;
     //return (await _getIOClient()).get(url, headers: headers);
   }
 
   static Future<http.Response> httpPost(Uri url, {Map<String,String>? headers, Object? body, Encoding? encoding}) async {
     Future<http.Response> r = (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
-    await logNotification('httpPost: r=${r.statusCode}: ${url}');
+    final s = r.statusCode.toString();
+    await logNotification('httpPost: r=${s}: ${url}');
     return r;
     //return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
   }
 
   static Future<http.StreamedResponse> httpSend(http.Request request) async {
     Future<http.StreamedResponse> r = (await _getIOClient()).send(request);
-    await logNotification('httpSend: r=${r.statusCode}: ${url}');
+    final s = r.statusCode.toString();
+    await logNotification('httpSend: r=${s}: ${url}');
     return r;
     //return (await _getIOClient()).send(request);
   }
