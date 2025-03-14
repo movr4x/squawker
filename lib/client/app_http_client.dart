@@ -93,9 +93,12 @@ class AppHttpClient {
     else {
       throw Exception('Uri scheme ${uri.scheme} not implemented.');
     }
-    // With user supplied certs for SecurityContext, user can simply add certificate
-    // for proxy, so accepting invalid certs should not be needed anymore.
-    //httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    if (!isUserCertSupported()) {
+      // This allows bad certificates, and is not secure.
+      // If user supplied certificates are supported, then it should not
+      // be used, as user can simply add CA cert for proxy.
+      httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    }
   }
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
