@@ -28,19 +28,27 @@ class AppHttpClient {
 
   static Future<HttpClient> _getNewHttpClient() {
     if (_ioClient != null) {
-      try {
-        (await _ioClient)?.close();
-      } catch (e) {
-        //
-      }
+      _ioClient.then(
+        (ioClient) {
+          try {
+            ioClient.close();
+          } catch (e) {
+            //
+          }
+        }
+      );
       _ioClient = null;
     }
     else if (_httpClient != null) {
-      try {
-        (await _httpClient)?.close(force: true);
-      } catch (e) {
-        //
-      }
+      _httpClient.then(
+        (httpClient) {
+          try {
+            httpClient.close(force: true);
+          } catch (e) {
+            //
+          }
+        }
+      );
     }
     _httpClient = _createHttpClient();
     return _httpClient!;
