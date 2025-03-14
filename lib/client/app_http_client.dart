@@ -62,12 +62,14 @@ class AppHttpClient {
   }
 
   static Future<void> setProxy(String? proxy) async {
-    final httpClient = await _getNewHttpClient();
     if (proxy?.isEmpty ?? true) {
+      await _getNewHttpClient();
       return;
     }
     Uri uri = Uri.parse(proxy!);
+    HttpClient httpClient;
     if (uri.scheme == 'socks5') {
+      httpClient = await _getNewHttpClient();
       String? username;
       String? password;
       if (uri.userInfo.isNotEmpty) {
@@ -82,6 +84,7 @@ class AppHttpClient {
       ]);
     }
     else if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
+      httpClient = await _getNewHttpClient();
       httpClient.findProxy = (Uri url) {
         String foundProxy = HttpClient.findProxyFromEnvironment(url, environment: {"https_proxy": proxy});
         return foundProxy;
