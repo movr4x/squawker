@@ -26,30 +26,48 @@ class AppHttpClient {
     return HttpClient();
   }
 
-  static Future<HttpClient> _getHttpClient() {
+  static Future<HttpClient> _getNewHttpClient() {
+    if (_ioClient != null) {
+      try {
+        _ioClient.close();
+      } catch (e) {
+        //
+      }
+      _ioClient = null;
+    }
+    else if (_httpClient != null) {
+      try {
+        _httpClient.close(force: true);
+      } catch (e) {
+        //
+      }
+    }
+    _httpClient = _createHttpClient();
+    return _httpClient;
+  }
+
+  static Future<HttpClient> _getCachedHttpClient() {
     _httpClient ??= _createHttpClient();
     return _httpClient!;
   }
 
   static Future<IOClient> _createIOClient() async {
-    HttpClient httpClient = await _getHttpClient();
+    HttpClient httpClient = await _getCachedHttpClient();
     return IOClient(httpClient);
   }
 
-  static Future<IOClient> _getIOClient() {
+  static Future<IOClient> _getCachedIOClient() {
     _ioClient ??= _createIOClient();
     return _ioClient!;
   }
 
   static Future<void> setProxy(String? proxy) async {
+    final httpClient = await _getNewHttpClient();
     if (proxy?.isEmpty ?? true) {
-      _ioClient = null;
       return;
     }
     Uri uri = Uri.parse(proxy!);
-    HttpClient httpClient;
     if (uri.scheme == 'socks5') {
-      httpClient = await _getHttpClient();
       String? username;
       String? password;
       if (uri.userInfo.isNotEmpty) {
@@ -64,7 +82,6 @@ class AppHttpClient {
       ]);
     }
     else if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
-      httpClient = await _getHttpClient();
       httpClient.findProxy = (Uri url) {
         String foundProxy = HttpClient.findProxyFromEnvironment(url, environment: {"https_proxy": proxy});
         return foundProxy;
@@ -79,15 +96,15 @@ class AppHttpClient {
   }
 
   static Future<http.Response> httpGet(Uri url, {Map<String,String>? headers}) async {
-    return (await _getIOClient()).get(url, headers: headers);
+    return (await _getCachedIOClient()).get(url, headers: headers);
   }
 
   static Future<http.Response> httpPost(Uri url, {Map<String,String>? headers, Object? body, Encoding? encoding}) async {
-    return (await _getIOClient()).post(url, headers: headers, body: body, encoding: encoding);
+    return (await _getCachedIOClient()).post(url, headers: headers, body: body, encoding: encoding);
   }
 
   static Future<http.StreamedResponse> httpSend(http.Request request) async {
-    return (await _getIOClient()).send(request);
+    return (await _getCachedIOClient()).send(request);
   }
 
 }
