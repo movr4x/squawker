@@ -11,16 +11,18 @@ class AppHttpClient {
   static Future<IOClient>? _ioClient;
 
   static Future<HttpClient> _createHttpClient() async {
-    final List<String> pemCerts = (await getUserCerts()) ?? [];
-    if (!pemCerts.isEmpty) {
-      try {
-        final securityContext = SecurityContext(withTrustedRoots: true);
-        final pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
-        final pemCertsBytes = utf8.encode(pemCertsCombined);
-        securityContext.setTrustedCertificatesBytes(pemCertsBytes);
-        return HttpClient(context: securityContext);
-      } catch (e) {
-        //
+    if (isUserCACertSupported()) {
+      final List<String> pemCerts = (await getUserCACerts()) ?? [];
+      if (!pemCerts.isEmpty) {
+        try {
+          final securityContext = SecurityContext(withTrustedRoots: true);
+          final pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
+          final pemCertsBytes = utf8.encode(pemCertsCombined);
+          securityContext.setTrustedCertificatesBytes(pemCertsBytes);
+          return HttpClient(context: securityContext);
+        } catch (e) {
+          //
+        }
       }
     }
     return HttpClient();
@@ -101,9 +103,9 @@ class AppHttpClient {
     else {
       throw Exception('Uri scheme ${uri.scheme} not implemented.');
     }
-    if (!isUserCertSupported()) {
+    if (!isUserCACertSupported()) {
       // This allows bad certificates, and is not secure.
-      // If user supplied certificates are supported, then it should not
+      // If user supplied CA certificates are supported then it should not
       // be used, as user can simply add CA cert for proxy.
       httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     }
