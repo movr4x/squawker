@@ -28,7 +28,7 @@ class AppHttpClient {
 
   static Future<HttpClient> _getNewHttpClient() {
     if (_ioClient != null) {
-      _ioClient.then(
+      _ioClient?.then(
         (ioClient) {
           try {
             ioClient.close();
@@ -40,7 +40,7 @@ class AppHttpClient {
       _ioClient = null;
     }
     else if (_httpClient != null) {
-      _httpClient.then(
+      _httpClient?.then(
         (httpClient) {
           try {
             httpClient.close(force: true);
