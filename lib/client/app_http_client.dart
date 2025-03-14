@@ -29,7 +29,7 @@ class AppHttpClient {
   static Future<HttpClient> _getNewHttpClient() {
     if (_ioClient != null) {
       try {
-        _ioClient.close();
+        (await _ioClient)?.close();
       } catch (e) {
         //
       }
@@ -37,13 +37,13 @@ class AppHttpClient {
     }
     else if (_httpClient != null) {
       try {
-        _httpClient.close(force: true);
+        (await _httpClient)?.close(force: true);
       } catch (e) {
         //
       }
     }
     _httpClient = _createHttpClient();
-    return _httpClient;
+    return _httpClient!;
   }
 
   static Future<HttpClient> _getCachedHttpClient() {
