@@ -78,13 +78,13 @@ class MainActivity: FlutterActivity() {
                     requestPostNotificationsPermissions()
                     result.success(true)
                 }
-                "getUserCerts" -> result.success(getUserCerts())
+                "getUserCACerts" -> result.success(getUserCACerts())
                 else -> result.notImplemented()
             }
         }
     }
 
-    private fun getUserCerts(): List<String> {
+    private fun getUserCACerts(): List<String> {
         val pemCerts = mutableListOf<String>()
         try {
             val keyStore = KeyStore.getInstance("AndroidCAStore")
