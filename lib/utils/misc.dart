@@ -86,8 +86,12 @@ String getShortSystemLocale() {
   return Platform.localeName.split("_")[0];
 }
 
+bool isUserCertSupported() {
+    return Platform.isAndroid;
+}
+
 Future<List<String>> getUserCerts() async {
-  if (!Platform.isAndroid) {
+  if (!isUserCertSupported()) {
     return [];
   }
   try {
