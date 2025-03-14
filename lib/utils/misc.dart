@@ -86,16 +86,16 @@ String getShortSystemLocale() {
   return Platform.localeName.split("_")[0];
 }
 
-bool isUserCertSupported() {
+bool isUserCACertSupported() {
     return Platform.isAndroid;
 }
 
-Future<List<String>> getUserCerts() async {
-  if (!isUserCertSupported()) {
+Future<List<String>> getUserCACerts() async {
+  if (!isUserCACertSupported()) {
     return [];
   }
   try {
-    final List<dynamic>? pemCerts = await androidChannel.invokeMethod('getUserCerts');
+    final List<dynamic>? pemCerts = await androidChannel.invokeMethod('getUserCACerts');
     return pemCerts?.cast<String>() ?? [];
   } catch (e) {
     return [];
