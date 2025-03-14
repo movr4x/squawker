@@ -207,6 +207,9 @@ Future<void> main() async {
     }
   });
 
+  HttpOverrides.global = AppHttpOverrides();
+  await AppHttpClient.setProxy(prefService.get(optionProxy));
+
   var shouldCheckForUpdates = prefService.get(optionShouldCheckForUpdates);
   if (shouldCheckForUpdates) {
     // Don't check for updates if user disabled it.
@@ -237,8 +240,6 @@ Future<void> main() async {
   var trendLocationModel = UserTrendLocationModel(prefService);
 
   await TwitterAccount.loadAllTwitterTokensAndRateLimits();
-
-  await AppHttpClient.setProxy(prefService.get(optionProxy));
 
   TranslationAPI.setTranslationHostsFromStr(prefService.get(optionTranslators));
 
