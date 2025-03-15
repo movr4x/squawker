@@ -19,6 +19,9 @@ class AppHttpClient extends HttpOverrides {
   static SecurityContext? _securityContext;
   static Uint8List? _userCaCertsBytes;
 
+  static bool _customBypassProxy = false;
+  static bool _customBypassIncludeUserCaCerts = false;
+
   static void _closeIoClient() {
     if (_ioClient == null) return;
 
@@ -142,6 +145,10 @@ class AppHttpClient extends HttpOverrides {
 
   static bool getAcceptBadCertsForHttpsProxy() => _acceptBadCertsForHttpsProxy;
 
+  static bool isConnectionInsecure() {
+    return (_isProxyHttps() && getAcceptBadCertsForHttpsProxy());
+  }
+
   static SecurityContext? _getOrExtendSecurityContext(SecurityContext? context) {
     SecurityContext? retContext = null;
     if (context != null) {
@@ -193,11 +200,36 @@ class AppHttpClient extends HttpOverrides {
 
   static bool getIncludeUserCaCerts() => _includeUserCaCerts;
 
+  static bool _getCustomBypassProxy() => _customBypassProxy;
+
+  static bool _getCustomBypassIncludeUserCaCertificates() => _customBypassIncludeUserCaCertificates;
+
+  static HttpClient createCustomHttpClient({bool bypassProxy = false, bool bypassIncludeUserCaCertificates = false}) {
+    _customBypassProxy = bypassProxy;
+    _customBypassIncludeUserCaCertificates = bypassIncludeUserCaCertificates;
+
+    HttpClient? httpClient = null;
+    try {
+      httpClient = HttpClient();
+    } catch(e) {
+      _customBypassIncludeUserCaCertificates = false;
+      _customBypassProxy = false;
+      rethrow;
+    }
+
+    _customBypassIncludeUserCaCertificates = false;
+    _customBypassProxy = false;
+
+    return httpClient;
+  }
+
   @override
   HttpClient createHttpClient(SecurityContext? context) {
-    fianl SecurityContext? newContext = _getOrExtendSecurityContext(context);
+    final SecurityContext? newContext = (
+      !_getCustomBypassIncludeUserCaCertificates() ? _getOrExtendSecurityContext(context) : context
+    );
     final HttpClient httpClient = super.createHttpClient(newContext);
-    if (!_isProxyModified() && getProxy() != null) {
+    if (!_isProxyModified() && !_getCustomBypassProxy() && getProxy() != null) {
       _assignProxyToHttpClient(_proxy, _proxySettings, httpClient);
       if (_isProxyHttps() && getAcceptBadCertsForHttpsProxy()) {
         httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
