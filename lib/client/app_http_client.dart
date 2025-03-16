@@ -16,6 +16,7 @@ class AHCUserCaCertsData {
   final bool includeUserCaCerts;
   final SecurityContext? securityContext;
   final Uint8List? userCaCertsBytes;
+  AHCUserCaCertsData(this.includeUserCaCerts, this.securityContext, this.userCaCertsBytes);
 }
 
 class AppHttpClient extends HttpOverrides {
@@ -52,14 +53,14 @@ class AppHttpClient extends HttpOverrides {
   static void _assignProxyToHttpClient(AHCProxyData proxyData, HttpClient httpClient) {
     if (proxyData == null) return;
 
-    if (proxyData.socksSettings != null) {
-      SocksTCPClient.assignToHttpClient(httpClient, [proxyData.socksSettings]);
+    if (proxyData?.socksSettings != null) {
+      SocksTCPClient.assignToHttpClient(httpClient, [proxyData?.socksSettings]);
     }
-    else if (proxyData.proxyStr != null) {
+    else if (proxyData?.proxyStr != null) {
       httpClient.findProxy = (Uri url) {
         final String foundProxy = HttpClient.findProxyFromEnvironment(
           url,
-          environment: {"https_proxy": proxyData.proxyStr}
+          environment: {"https_proxy": proxyData?.proxyStr}
         );
         return foundProxy;
       };
@@ -146,37 +147,40 @@ class AppHttpClient extends HttpOverrides {
     return (_isProxyHttps() && getAcceptBadCertsForHttpsProxy());
   }
 
-  static SecurityContext? _getOrExtendSecurityContext(SecurityContext? context) {
+  static SecurityContext? _getOrExtendSecurityContext(AHCUserCaCertsData userCaCertsData, SecurityContext? context) {
     SecurityContext? retContext = null;
+
     if (context != null) {
       try {
-        if (_userCaCertsBytes != null) {
-          context.setTrustedCertificatesBytes(_userCaCertsBytes);
+        if (userCaCertsData?.userCaCertsBytes != null) {
+          context.setTrustedCertificatesBytes(userCaCertsData?.userCaCertsBytes);
         }
         retContext = context;
       } catch (e) {
-        if (_securityContext != null) {
-          retContext = _securityContext;
+        if (userCaCertsData?.securityContext != null) {
+          retContext = userCaCertsData?.securityContext;
         }
       }
     }
-    else if (_securityContext != null) {
-      retContext = _securityContext;
+    else if (userCaCertsData?.securityContext != null) {
+      retContext = userCaCertsData?.securityContext;
     }
+
     return retContext;
   }
 
-  static bool getIncludeUserCaCerts() => _userCaCertsData?.includeUserCaCerts;
+  static bool getIncludeUserCaCerts() => _userCaCertsData?.includeUserCaCerts ?? false;
 
   static Future<void> setIncludeUserCaCerts(bool includeUserCACerts) async {
-    if (includeUserCACerts == _includeUserCACerts) return;
+    if (getIncludeUserCaCerts() == _includeUserCACerts) return;
 
+    bool newincludeUserCACerts = includeUserCACerts;
     SecurityContext? newSecurityContext = null;
     Uint8List newUserCaCertsBytes = null;
 
     bool certsChanged = isUserCaCertSupported();
 
-    if (includeUserCaCerts && certsChanged) {
+    if (newincludeUserCACerts && certsChanged) {
       final List<String> pemCerts = (await getUserCaCerts()) ?? [];
       if (!pemCerts.isEmpty) {
         newSecurityContext = SecurityContext(withTrustedRoots: true);
@@ -188,9 +192,11 @@ class AppHttpClient extends HttpOverrides {
       }
     }
 
-    _includeUserCaCerts = includeUserCaCerts;
-    _securityContext = newSecurityContext;
-    _userCaCertsBytes = newUserCaCertsBytes;
+    _userCaCertsData = AHCUserCaCertsData(
+      includeUserCaCerts: newincludeUserCACerts,
+      securityContext: newSecurityContext,
+      userCaCertsBytes: newUserCaCertsBytes
+    );
 
     if (certsChanged) {
       _closeIoClient();
@@ -215,17 +221,18 @@ class AppHttpClient extends HttpOverrides {
     final bool bypassIncludeUserCaCertificates = Zone.current[#bypassIncludeUserCaCertificates] ?? false;
 
     final SecurityContext? newContext = (
-      !bypassIncludeUserCaCertificates ? _getOrExtendSecurityContext(context) : context
+      !bypassIncludeUserCaCertificates ? _getOrExtendSecurityContext(_userCaCertsData, context) : context
     );
 
     final HttpClient httpClient = super.createHttpClient(newContext);
 
     if (!bypassProxy && getProxy() != null) {
-      _assignProxyToHttpClient(_proxy, _proxySettings, httpClient);
+      _assignProxyToHttpClient(_proxyData, httpClient);
       if (_isProxyHttps() && getAcceptBadCertsForHttpsProxy()) {
         httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       }
     }
+
     return httpClient;
   }
 
