@@ -260,7 +260,7 @@ class AppHttpClient extends HttpOverrides {
 
     final HttpClient httpClient = super.createHttpClient(newContext);
 
-    if (!bypassProxy && getProxy() != null) {
+    if (!bypassProxy) {
       _assignProxyToHttpClient(_proxyData, httpClient, getAcceptBadCertsForHttpsProxy());
     }
 
