@@ -21,10 +21,9 @@ class AHCProxyData {
 }
 
 class AHCUserCaCertsData {
-  final bool includeUserCaCerts;
   final SecurityContext? securityContext;
   final Uint8List? userCaCertsBytes;
-  AHCUserCaCertsData(this.includeUserCaCerts, this.securityContext, this.userCaCertsBytes);
+  AHCUserCaCertsData(this.securityContext, this.userCaCertsBytes);
 }
 
 class AppHttpClient extends HttpOverrides {
@@ -57,7 +56,7 @@ class AppHttpClient extends HttpOverrides {
   }
 
   static void _assignProxyToHttpClient(
-      AHCProxyData proxyData,
+      AHCProxyData? proxyData,
       HttpClient httpClient,
       bool acceptBadCertsForHttpsProxy = false
   ) {
@@ -91,7 +90,7 @@ class AppHttpClient extends HttpOverrides {
     }
   }
 
-  static bool _isProxyHttps() => _proxyData?.proxyScheme == AHCProxyScheme.https ?? false;
+  static bool _isProxyHttps() => (_proxyData?.proxyScheme == AHCProxyScheme.https ?? false);
 
   static String? getProxy() => _proxyData?.proxyString;
 
@@ -181,60 +180,60 @@ class AppHttpClient extends HttpOverrides {
     return (_isProxyHttps() && getAcceptBadCertsForHttpsProxy());
   }
 
-  static SecurityContext? _getOrExtendSecurityContext(AHCUserCaCertsData userCaCertsData, SecurityContext? context) {
+  static SecurityContext? _getOrExtendSecurityContext(AHCUserCaCertsData? userCaCertsData, SecurityContext? context) {
+    if (userCaCertsData == null) return;
+
     SecurityContext? retContext = null;
 
     if (context != null) {
       try {
-        if (userCaCertsData?.userCaCertsBytes != null) {
-          context.setTrustedCertificatesBytes(userCaCertsData?.userCaCertsBytes);
+        if (userCaCertsData.userCaCertsBytes != null) {
+          context.setTrustedCertificatesBytes(userCaCertsData.userCaCertsBytes);
         }
         retContext = context;
       } catch (e) {
-        if (userCaCertsData?.securityContext != null) {
-          retContext = userCaCertsData?.securityContext;
+        if (userCaCertsData.securityContext != null) {
+          retContext = userCaCertsData.securityContext;
         }
       }
     }
-    else if (userCaCertsData?.securityContext != null) {
-      retContext = userCaCertsData?.securityContext;
+    else if (userCaCertsData.securityContext != null) {
+      retContext = userCaCertsData.securityContext;
     }
 
     return retContext;
   }
 
-  static bool getIncludeUserCaCerts() => _userCaCertsData?.includeUserCaCerts ?? false;
+  static bool getIncludeUserCaCerts() => (_userCaCertsData != null);
 
   static Future<void> setIncludeUserCaCerts(bool includeUserCACerts) async {
-    if (getIncludeUserCaCerts() == _includeUserCACerts) return;
+    if (getIncludeUserCaCerts() == includeUserCACerts) return;
 
-    bool newincludeUserCACerts = includeUserCACerts;
-    SecurityContext? newSecurityContext = null;
-    Uint8List newUserCaCertsBytes = null;
+    if (!includeUserCACerts) {
+      _userCaCertsData = null;
+      _closeIoClient();
+      return;
+    }
 
-    bool certsChanged = isUserCaCertSupported();
+    SecurityContext? securityContext = null;
+    Uint8List userCaCertsBytes = null;
 
-    if (newincludeUserCACerts && certsChanged) {
+    if (isUserCaCertSupported()) {
       final List<String> pemCerts = (await getUserCaCerts()) ?? [];
       if (!pemCerts.isEmpty) {
-        newSecurityContext = SecurityContext(withTrustedRoots: true);
+        securityContext = SecurityContext(withTrustedRoots: true);
         final String pemCertsCombined = pemCerts.map((pem) => pem.trim()).join('\n');
-        newUserCaCertsBytes = utf8.encode(pemCertsCombined);
-        newSecurityContext.setTrustedCertificatesBytes(newUserCaCertsBytes);
-      } else {
-        certsChanged = false;
+        userCaCertsBytes = utf8.encode(pemCertsCombined);
+        securityContext.setTrustedCertificatesBytes(userCaCertsBytes);
       }
     }
 
     _userCaCertsData = AHCUserCaCertsData(
-      includeUserCaCerts: newincludeUserCACerts,
-      securityContext: newSecurityContext,
-      userCaCertsBytes: newUserCaCertsBytes
+      securityContext: securityContext,
+      userCaCertsBytes: userCaCertsBytes
     );
 
-    if (certsChanged) {
-      _closeIoClient();
-    }
+    _closeIoClient();
   }
 
   static HttpClient createCustomHttpClient({
