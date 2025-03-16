@@ -5,22 +5,26 @@ import 'package:http/io_client.dart';
 import 'package:socks5_proxy/socks_client.dart';
 import 'package:squawker/utils/misc.dart';
 
+class AHCProxyData {
+  final String? proxyStr;
+  final ProxySettings? socksSettings;
+  final bool isProxyHttps;
+  AppHttpProxyData(this.proxyStr, this.socksSettings, this.isProxyHttps);
+}
+
+class AHCUserCaCertsData {
+  final bool includeUserCaCerts;
+  final SecurityContext? securityContext;
+  final Uint8List? userCaCertsBytes;
+}
+
 class AppHttpClient extends HttpOverrides {
   static IOClient? _ioClient;
 
-  static String? _proxy;
-  static ProxySettings? _proxySettings;
-  static bool _isProxyHttps = false;
-  static bool _isProxyModified = false;
-
+  static AHCProxyData? _proxyData;
   static bool _acceptBadCertsForHttpsProxy = false;
 
-  static bool _includeUserCaCerts = false;
-  static SecurityContext? _securityContext;
-  static Uint8List? _userCaCertsBytes;
-
-  static bool _customBypassProxy = false;
-  static bool _customBypassIncludeUserCaCerts = false;
+  static AHCUserCaCertsData? _userCaCertsData;
 
   static void _closeIoClient() {
     if (_ioClient == null) return;
@@ -33,93 +37,90 @@ class AppHttpClient extends HttpOverrides {
     _ioClient = null;
   }
 
-  static void _setIoClient(IOClient? ioClient) {
-    _closeIoClient();
-    _ioClient = ioClient;
-  }
-
   static void _getIoClient() {
     _ioClient ??= IOClient(HttpClient());
     return _ioClient;
   }
 
-  static void _isProxyModified() => _isProxyModified;
+  static void _setIoClient(IOClient? ioClient) {
+    _closeIoClient();
+    _ioClient = ioClient;
+  }
 
-  static void _isProxyHttps() => _isProxyHttps;
+  static bool _isProxyHttps() => _proxyData?._isProxyHttps ?? false;
 
-  static void _assignProxyToHttpClient(String? proxy, ProxySettings? proxySettings, HttpClient httpClient) {
-    if (proxySettings != null) {
-      SocksTCPClient.assignToHttpClient(httpClient, [proxySettings]);
+  static void _assignProxyToHttpClient(AHCProxyData proxyData, HttpClient httpClient) {
+    if (proxyData == null) return;
+
+    if (proxyData.socksSettings != null) {
+      SocksTCPClient.assignToHttpClient(httpClient, [proxyData.socksSettings]);
     }
-    else if (proxy != null) {
+    else if (proxyData.proxyStr != null) {
       httpClient.findProxy = (Uri url) {
         final String foundProxy = HttpClient.findProxyFromEnvironment(
           url,
-          environment: {"https_proxy": proxy}
+          environment: {"https_proxy": proxyData.proxyStr}
         );
         return foundProxy;
       };
     }
   }
 
-  static void setProxy(String? proxy) {
-    if (proxy == _proxy) return;
+  static String? getProxy() => _proxyData?.proxyStr;
 
-    _isProxyModified = true;
+  static void setProxy(String? proxyStr) {
+    if (getProxy() == proxyStr) return;
 
-    String? newProxy = null;
-    ProxySettings? newProxySettings = null;
+    String? newProxyStr = null;
+    ProxySettings? newSocksSettings = null;
     bool newIsProxyHttps = false;
 
-    IOClient? ioClient = null;
-
-    if (proxy?.isNotEmpty ?? false) {
-      newProxy = proxy;
-      try {
-        final Uri uri = Uri.parse(proxy!);
-        HttpClient? httpClient = null;
-        if (uri.scheme == 'socks5') {
-          String? username = null;
-          String? password = null;
-          if (uri.userInfo.isNotEmpty) {
-            final int userInfoSplitIndex = uri.userInfo.indexOf(':');
-            if (userInfoSplitIndex == -1) {
-              username = uri.userInfo;
-            }
-            else {
-              username = uri.userInfo.substring(0, userInfoSplitIndex);
-              password = uri.userInfo.substring(userInfoSplitIndex + 1);
-            }
+    if (proxyStr?.isNotEmpty ?? false) {
+      newProxyStr = proxyStr;
+      final Uri uri = Uri.parse(proxyStr!);
+      if (uri.scheme == 'socks5') {
+        String? username = null;
+        String? password = null;
+        if (uri.userInfo.isNotEmpty) {
+          final int userInfoSplitIndex = uri.userInfo.indexOf(':');
+          if (userInfoSplitIndex == -1) {
+            username = uri.userInfo;
           }
-          newProxySettings = ProxySettings(
-            InternetAddress(uri.host),
-            uri.port,
-            username: username,
-            password: password
-          );
-          httpClient = HttpClient();
-          _assignProxyToHttpClient(newProxy, newProxySettings, httpClient);
+          else {
+            username = uri.userInfo.substring(0, userInfoSplitIndex);
+            password = uri.userInfo.substring(userInfoSplitIndex + 1);
+          }
         }
-        else if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
-          newIsProxyHttps = true;
-          httpClient = HttpClient();
-          _assignProxyToHttpClient(newProxy, newProxySettings, httpClient);
-        }
-        else {
-          throw Exception('Uri scheme ${uri.scheme} not implemented.');
-        }
-        if (httpClient != null) {
-          ioClient = IOClient(httpClient);
-        }
-      } catch (e) {
-        _isProxyModified = false;
-        rethrow;
+        newSocksSettings = ProxySettings(
+          InternetAddress(uri.host),
+          uri.port,
+          username: username,
+          password: password
+        );
+      }
+      else if (uri.scheme.isEmpty || uri.scheme == 'http' || uri.scheme == 'https') {
+        newIsProxyHttps = true;
+      }
+      else {
+        throw Exception('Uri scheme ${uri.scheme} not implemented.');
       }
     }
 
-    _proxy = newProxy;
-    _proxySettings = newProxySettings;
-    _isProxyHttps = newIsProxyHttps;
+    final AHCProxyData newProxyData = (
+      proxyStr: newProxyStr,
+      socksSettings: newSocksSettings,
+      isProxyHttps: newIsProxyHttps
+    );
+
+    IOClient? ioClient = null;
+
+    if (newProxyData.proxyStr != null) {
+        final HttpClient httpClient = createCustomHttpClient(bypassProxy: true);
+        _assignProxyToHttpClient(newProxyData, httpClient);
+        ioClient = IOClient(httpClient);
+    }
+
+    _proxyData = proxyData
 
     if (ioClient != null) {
       _setIoClient(ioClient);
@@ -127,11 +128,9 @@ class AppHttpClient extends HttpOverrides {
     else {
       _closeIoClient();
     }
-
-    _isProxyModified = false;
   }
 
-  static String? getProxy() => _proxy;
+  static bool getAcceptBadCertsForHttpsProxy() => _acceptBadCertsForHttpsProxy;
 
   static void setAcceptBadCertsForHttpsProxy(bool acceptBadCertsForHttpsProxy) {
     if (acceptBadCertsForHttpsProxy == _acceptBadCertsForHttpsProxy) return;
@@ -142,8 +141,6 @@ class AppHttpClient extends HttpOverrides {
       _closeIoClient();
     }
   }
-
-  static bool getAcceptBadCertsForHttpsProxy() => _acceptBadCertsForHttpsProxy;
 
   static bool isConnectionInsecure() {
     return (_isProxyHttps() && getAcceptBadCertsForHttpsProxy());
@@ -168,6 +165,8 @@ class AppHttpClient extends HttpOverrides {
     }
     return retContext;
   }
+
+  static bool getIncludeUserCaCerts() => _userCaCertsData?.includeUserCaCerts;
 
   static Future<void> setIncludeUserCaCerts(bool includeUserCACerts) async {
     if (includeUserCACerts == _includeUserCACerts) return;
@@ -198,38 +197,30 @@ class AppHttpClient extends HttpOverrides {
     }
   }
 
-  static bool getIncludeUserCaCerts() => _includeUserCaCerts;
-
-  static bool _getCustomBypassProxy() => _customBypassProxy;
-
-  static bool _getCustomBypassIncludeUserCaCertificates() => _customBypassIncludeUserCaCertificates;
-
-  static HttpClient createCustomHttpClient({bool bypassProxy = false, bool bypassIncludeUserCaCertificates = false}) {
-    _customBypassProxy = bypassProxy;
-    _customBypassIncludeUserCaCertificates = bypassIncludeUserCaCertificates;
-
-    HttpClient? httpClient = null;
-    try {
-      httpClient = HttpClient();
-    } catch(e) {
-      _customBypassIncludeUserCaCertificates = false;
-      _customBypassProxy = false;
-      rethrow;
-    }
-
-    _customBypassIncludeUserCaCertificates = false;
-    _customBypassProxy = false;
-
-    return httpClient;
+  static HttpClient createCustomHttpClient({
+      bool bypassProxy = false,
+      bool bypassIncludeUserCaCertificates = false
+  }) {
+    return runZoned(() {
+      return HttpClient();
+    }, zoneValues: {
+      #bypassProxy: bypassProxy,
+      #bypassIncludeUserCaCertificates: bypassIncludeUserCaCertificates
+    });
   }
 
   @override
   HttpClient createHttpClient(SecurityContext? context) {
+    final bool bypassProxy = Zone.current[#bypassProxy] ?? false;
+    final bool bypassIncludeUserCaCertificates = Zone.current[#bypassIncludeUserCaCertificates] ?? false;
+
     final SecurityContext? newContext = (
-      !_getCustomBypassIncludeUserCaCertificates() ? _getOrExtendSecurityContext(context) : context
+      !bypassIncludeUserCaCertificates ? _getOrExtendSecurityContext(context) : context
     );
+
     final HttpClient httpClient = super.createHttpClient(newContext);
-    if (!_isProxyModified() && !_getCustomBypassProxy() && getProxy() != null) {
+
+    if (!bypassProxy && getProxy() != null) {
       _assignProxyToHttpClient(_proxy, _proxySettings, httpClient);
       if (_isProxyHttps() && getAcceptBadCertsForHttpsProxy()) {
         httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
