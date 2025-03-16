@@ -48,7 +48,7 @@ class AppHttpClient extends HttpOverrides {
     _ioClient = ioClient;
   }
 
-  static bool _isProxyHttps() => _proxyData?._isProxyHttps ?? false;
+  static bool _isProxyHttps() => _proxyData?.isProxyHttps ?? false;
 
   static void _assignProxyToHttpClient(AHCProxyData proxyData, HttpClient httpClient) {
     if (proxyData == null) return;
