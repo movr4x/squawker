@@ -13,10 +13,11 @@ enum AHCProxyScheme {
 }
 
 class AHCProxyData {
-  final String? proxyStr;
-  final ProxySettings? socksSettings;
-  final AHCProxyScheme scheme;
-  AppHttpProxyData(this.proxyStr, this.socksSettings, this.scheme);
+  final String proxyString;
+  final String hostPreLookup;
+  final ProxySettings proxySettings;
+  final AHCProxyScheme proxyScheme;
+  AppHttpProxyData(this.proxyString, this.hostPreLookup, this.proxySettings, this.proxyScheme);
 }
 
 class AHCUserCaCertsData {
@@ -62,108 +63,106 @@ class AppHttpClient extends HttpOverrides {
   ) {
     if (proxyData == null) return;
 
-    final AHCProxyScheme scheme = proxyData.scheme;
-    switch (scheme) {
+    switch (proxyData.proxyScheme) {
       case AHCProxyScheme.socks5:
-        if (proxyData.socksSettings != null) {
-          SocksTCPClient.assignToHttpClient(httpClient, [proxyData.socksSettings]);
-        }
+        SocksTCPClient.assignToHttpClient(httpClient, [proxyData.proxySettings]);
+        break;
       case AHCProxyScheme.http:
       case AHCProxyScheme.https:
-        if (proxyData.proxyStr != null) {
-          if (scheme == AHCProxyScheme.https) {
-            if (proxyUri.scheme == 'https') {
-              // TODO: store host/port data
-              final String proxyHost = uriVar.host;
-              final int proxyPort = uriVar.port != 0 ? uriVar.port : 443;
-              httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
-                return host == proxyHost && port == proxyPort;
-              };
-            }
-          }
-          final String proxyStr = proxyData.proxyStr;
-          httpClient.findProxy = (Uri url) {
-            final String foundProxy = HttpClient.findProxyFromEnvironment(
-              url,
-              environment: {
-                "https_proxy": proxyStr,
-                "http_proxy": proxyStr
-              }
-            );
-            return foundProxy;
+        if (proxyData.proxyScheme == AHCProxyScheme.https) {
+          final String proxyHost = proxyData.hostPreLookup;
+          final int proxyPort = (proxyData.proxySettings.port != 0 ? proxyData.proxySettings.port : 443);
+          httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
+            return (host == proxyHost && port == proxyPort);
           };
         }
+        final String proxyString = proxyData.proxyString;
+        httpClient.findProxy = (Uri url) {
+          final String foundProxy = HttpClient.findProxyFromEnvironment(
+            url,
+            environment: {
+              "https_proxy": proxyString,
+              "http_proxy": proxyString
+            }
+          );
+          return foundProxy;
+        };
+        break;
     }
   }
 
-  static String? getProxy() => _proxyData?.proxyStr;
+  static bool _isProxyHttps() => _proxyData?.proxyScheme == AHCProxyScheme.https ?? false;
 
-  static void setProxy(String? proxyStr) {
-    if (_proxyData?.proxyStr == proxyStr) return;
+  static String? getProxy() => _proxyData?.proxyString;
 
-    String? newProxyStr = null;
-    ProxySettings? newSocksSettings = null;
-    AHCProxyScheme newScheme = AHCProxyScheme.invalid;
+  static Future<void> setProxy(String? proxyString) async {
+    if (getProxy() == proxyString) return;
 
-    if (proxyStr?.isNotEmpty ?? false) {
-      newProxyStr = proxyStr;
-      final Uri uri = Uri.parse(proxyStr!);
-      final String uriScheme = (uri.scheme.isEmpty ? 'http' : uri.scheme);
-      newScheme = AHCProxyScheme.values.firstWhere(
-        (type) => type.name == uriScheme,
-        orElse: () => AHCProxyScheme.invalid
-      );
-      switch (newScheme) {
-        case AHCProxyScheme.socks5:
-          String? username = null;
-          String? password = null;
-          if (uri.userInfo.isNotEmpty) {
-            final int colonIndex = uri.userInfo.indexOf(':');
-            if (colonIndex == -1) {
-              username = uri.userInfo;
-            }
-            else if (colonIndex > 0) {
-              username = uri.userInfo.substring(0, colonIndex).trim();
-              password = uri.userInfo.substring(colonIndex + 1).trim();
-            }
-          }
-          newSocksSettings = ProxySettings(
-            InternetAddress(uri.host),
-            uri.port,
-            username: username,
-            password: password
-          );
-          break;
-        case AHCProxyScheme.http:
-        case AHCProxyScheme.https:
-          break;
-        default:
-          throw Exception('Uri scheme ${uriScheme} not implemented.');
+    if (proxyString?.isEmpty ?? true) {
+      _proxyData = null;
+      _closeIoClient();
+      return;
+    }
+
+    final Uri uri = Uri.parse(proxyString!);
+    final String uriScheme = (uri.scheme.isEmpty ? 'http' : uri.scheme);
+
+    final AHCProxyScheme proxyScheme = AHCProxyScheme.values.firstWhere(
+      (type) => type.name == uriScheme,
+      orElse: () => AHCProxyScheme.invalid
+    );
+
+    switch (proxyScheme) {
+      case AHCProxyScheme.socks5:
+      case AHCProxyScheme.http:
+      case AHCProxyScheme.https:
+        break;
+      default:
+        throw Exception('Uri scheme ${uriScheme} not implemented.');
+    }
+
+    String? username = null;
+    String? password = null;
+
+    if (uri.userInfo.isNotEmpty) {
+      final int colonIndex = uri.userInfo.indexOf(':');
+      if (colonIndex == -1) {
+        username = uri.userInfo;
+      }
+      else if (colonIndex > 0) {
+        username = uri.userInfo.substring(0, colonIndex).trim();
+        password = uri.userInfo.substring(colonIndex + 1).trim();
       }
     }
 
-    final AHCProxyData newProxyData = (
-      proxyStr: newProxyStr,
-      socksSettings: newSocksSettings,
-      scheme: newScheme
+    final String hostPreLookup = uri.host;
+
+    final List<InternetAddresses> resolvedAddresses = await InternetAddress.lookup(hostPreLookup);
+    if (resolvedAddresses.isEmpty) {
+      throw Exception('Could not resolve proxy host: ${hostPreLookup}');
+    }
+
+    final ProxySettings proxySettings = ProxySettings(
+      resolvedAddresses.first,
+      uri.port,
+      username: username,
+      password: password
     );
 
-    IOClient? ioClient = null;
+    final AHCProxyData proxyData = (
+      proxyString: proxyString,
+      hostPreLookup: hostPreLookup,
+      proxySettings: proxySettings,
+      proxyScheme: proxyScheme
+    );
 
-    if (newProxyData.proxyStr != null) {
-        final HttpClient httpClient = createCustomHttpClient(bypassProxy: true);
-        _assignProxyToHttpClient(newProxyData, httpClient, getAcceptBadCertsForHttpsProxy());
-        ioClient = IOClient(httpClient);
-    }
+    final HttpClient httpClient = createCustomHttpClient(bypassProxy: true);
+    _assignProxyToHttpClient(proxyData, httpClient, getAcceptBadCertsForHttpsProxy());
+    final IOClient ioClient = IOClient(httpClient);
 
-    _proxyData = proxyData
+    _proxyData = proxyData;
 
-    if (ioClient != null) {
-      _setIoClient(ioClient);
-    }
-    else {
-      _closeIoClient();
-    }
+    _setIoClient(ioClient);
   }
 
   static bool getAcceptBadCertsForHttpsProxy() => _acceptBadCertsForHttpsProxy;
@@ -173,7 +172,7 @@ class AppHttpClient extends HttpOverrides {
 
     _acceptBadCertsForHttpsProxy = acceptBadCertsForHttpsProxy
 
-    if (getProxy() != null) {
+    if (_isProxyHttps()) {
       _closeIoClient();
     }
   }
