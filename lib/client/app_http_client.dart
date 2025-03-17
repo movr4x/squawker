@@ -103,11 +103,14 @@ class AppHttpClient extends HttpOverrides {
       return;
     }
 
-    final Uri uri = Uri.parse(proxyString!);
-    final String uriScheme = (uri.scheme.isEmpty ? 'http' : uri.scheme);
+    final Uri uriUnmodified = Uri.parse(proxyString);
+    // HttpClient.findProxyFromEnvironment() expects url scheme for url parsing,
+    // otherwise it is automatically returning "DIRECT", so if no scheme is present
+    // then assume it is HTTP proxy.
+    final Uri uri = (uriUnmodified.scheme.isEmpty ? Uri.parse('http://' + proxyString) : uriUnmodified);
 
     final AHCProxyScheme proxyScheme = AHCProxyScheme.values.firstWhere(
-      (type) => type.name == uriScheme,
+      (type) => type.name == uri.scheme,
       orElse: () => AHCProxyScheme.invalid
     );
 
@@ -117,7 +120,7 @@ class AppHttpClient extends HttpOverrides {
       case AHCProxyScheme.https:
         break;
       default:
-        throw Exception('Uri scheme ${uriScheme} not implemented.');
+        throw Exception('Uri scheme ${uri.scheme} not implemented.');
     }
 
     String? username = null;
