@@ -133,7 +133,9 @@ class AppHttpClient extends HttpOverrides {
       }
       else if (colonIndex > 0) {
         username = uri.userInfo.substring(0, colonIndex).trim();
-        password = uri.userInfo.substring(colonIndex + 1).trim();
+        if (colonIndex < uri.userInfo.length - 1) {
+          password = uri.userInfo.substring(colonIndex + 1).trim();
+        }
       }
     }
 
