@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Allow cleartext traffic by default for HTTP proxy support -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
+            <!-- Trust system CA certificates -->
             <certificates src="system" />
+            <!-- Trust user CA certificates -->
             <certificates src="user" />
         </trust-anchors>
     </base-config>
+    <!-- Disallow cleartext traffic for known HTTPS domains/subdomains -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- Twitter/X and related -->
+        <domain includeSubdomains="true">x.com</domain>
+        <domain includeSubdomains="true">twitter.com</domain>
+        <domain includeSubdomains="true">twimg.com</domain>
+        <domain includeSubdomains="true">t.co</domain>
+        <!-- Checking updates from GitHub -->
+        <domain includeSubdomains="true">github.com</domain>
+    </domain-config>
 </network-security-config>
