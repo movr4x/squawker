@@ -9,14 +9,14 @@
             <certificates src="user" />
         </trust-anchors>
     </base-config>
-    <!-- Disallow cleartext traffic for known HTTPS domains/subdomains -->
+    <!-- Disallow cleartext traffic for used/known HTTPS domains/subdomains -->
     <domain-config cleartextTrafficPermitted="false">
         <!-- Twitter/X and related -->
         <domain includeSubdomains="true">x.com</domain>
         <domain includeSubdomains="true">twitter.com</domain>
         <domain includeSubdomains="true">twimg.com</domain>
         <domain includeSubdomains="true">t.co</domain>
-        <!-- Checking updates from GitHub -->
+        <!-- Checking application updates from GitHub -->
         <domain includeSubdomains="true">github.com</domain>
     </domain-config>
 </network-security-config>
